@@ -10,7 +10,10 @@
     <string name="pokemon_searched_name">"Nom du Pokémon "</string>
     <string name="pokemon_weight_value">Poids du Pokémon</string>
     <string name="pokemon_type_value">Type du Pokémon</string>
-    <string name="size">" Taille"</string>
+    <string name="size">Taille</string>
     <string name="type">Type</string>
     <string name="weight">Poids</string>
+    <string name="hp">PV</string>
+    <string name="pokemon_hp_value">PV du Pokémon</string>
+    <string name="pokemon_not_found">Pokémon non trouvé</string>
 </resources>
