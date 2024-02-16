@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name" translatable="false">Pokestat</string>
+    <string name="enter_name">Enter Name :</string>
+    <string name="exit">Exit</string>
+    <string name="search">Search</string>
+    <string name="enter_pokemon_s_name">Enter Pokemon\'s name :</string>
+    <string name="pokemon_size_value">Pokemon Size Value</string>
+    <string name="pokemon_searched">Pokemon searched</string>
+    <string name="pokemon_searched_name">Pokemon Searched name</string>
+    <string name="pokemon_type_value">Pokemon Type Value</string>
+    <string name="pokemon_weight_value">Pokemon Weight Value</string>
+    <string name="size">Size</string>
+    <string name="type">Type</string>
+    <string name="weight">Weight</string>
+</resources>
