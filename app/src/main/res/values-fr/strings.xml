@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Pokestat</string>
-    <string name="enter_name">Entrez le Nom :</string>
+    <string name="enter_name">Entrez le Nom</string>
     <string name="exit">Quitter</string>
     <string name="search">Recherche</string>
     <string name="enter_pokemon_s_name">Entrez le nom du Pokémon :</string>
@@ -16,4 +16,7 @@
     <string name="hp">PV</string>
     <string name="pokemon_hp_value">PV du Pokémon</string>
     <string name="pokemon_not_found">Pokémon non trouvé</string>
+    <string name="back">précédent</string>
+    <string name="website">Site</string>
+    <string name="pokemon_save_good">Les statistiques du Pokemon ont été enregistrées</string>
 </resources>

@@ -1,11 +1,16 @@
 package fr.univ_poitiers.dptinfo.pokestat;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,9 +21,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Objects;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -28,23 +37,45 @@ public class InfoPokemon extends AppCompatActivity {
 
     public static final String APP_TAG = "INFOPOKEMON";
 
-    private String pokemonName;
+    private String pokemonName,pokemonNameNonNormalize;
     private TextView pokeName, pokeSize, pokeWeight, pokeType, pokeHp;
 
     private ImageView pokeImage;
+
+    private Button backBtn,webSiteBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_info_pokemon);
 
+        // Récupérer le nom du Pokemon passé en argument
         pokemonName = getIntent().getStringExtra("inputpokemonname");
+        pokemonNameNonNormalize = pokemonName;
+        // Normaliser le nom du Pokemon en forme NFD (décomposition canonique)
+        pokemonName = Normalizer.normalize(pokemonName, Normalizer.Form.NFD);
+        // Remplacer les marques diacritiques par des chaînes vides
+        pokemonName = pokemonName.replaceAll("\\p{M}", "");
+
+
         pokeImage = findViewById(R.id.pokemonImage);
         pokeName = findViewById(R.id.textViewPSN);
         pokeSize = findViewById(R.id.textViewPSV);
         pokeWeight = findViewById(R.id.textViewPWV);
         pokeType = findViewById(R.id.textViewPTV);
         pokeHp = findViewById(R.id.textViewPHP);
+        backBtn = findViewById(R.id.buttonBack);
+        webSiteBtn = findViewById(R.id.buttonWebSite);
+
+        backBtn.setOnClickListener(v -> {
+            finish();
+        });
+
+        webSiteBtn.setOnClickListener(v -> {
+            String pokeUrl = "https://www.pokepedia.fr/"+ pokemonNameNonNormalize;
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(pokeUrl));
+            startActivity(intent);
+        });
 
 
         if (pokemonName != null && !pokemonName.equals("") && pokeName != null) {
@@ -102,10 +133,43 @@ public class InfoPokemon extends AppCompatActivity {
                 pokeWeight.setText(weight);
                 pokeType.setText(typeNames.toString());
                 pokeHp.setText(hp);
+
+
+                String fiche = "";
+                fiche += "pokemonName " + pokemonName + "\n";
+                fiche += "pokeWeight : " + weight + "\n";
+                fiche += "pokeSize : " + height + "\n";
+                fiche += "pokeType : " + typeNames.toString() + "\n";
+                fiche += "pokeHp : " + hp + "\n";
+                fiche += "pokeImage : " + imageUrl + "\n";
+                write_fiche_in_file(fiche);
+
             } else {
                 String message = getString(R.string.pokemon_not_found);
                 Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    // Méthode qui écrit la fiche d'un Pokemon dans un fichier
+    public void write_fiche_in_file(String fiche) {
+        // Choix du répertoire et du nom du fichier
+        File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File fileout = new File(folder, "pokestat_fiche.txt");
+
+        // Tentative d'écriture dans le fichier
+        try (FileOutputStream fos = new FileOutputStream(fileout, true)) {
+            PrintStream ps = new PrintStream(fos);
+            ps.println(fiche);
+            ps.close();
+            String message = getString(R.string.pokemon_save_good);
+            Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
+        } catch (FileNotFoundException e) {
+            Log.e(APP_TAG,"File not found",e);
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(APP_TAG,"Error I/O",e);
         }
     }
 }

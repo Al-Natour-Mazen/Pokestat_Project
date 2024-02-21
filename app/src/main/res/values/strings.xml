@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name" translatable="false">Pokestat</string>
-    <string name="enter_name">Enter Name :</string>
+    <string name="enter_name">Enter Name</string>
     <string name="exit">Exit</string>
     <string name="search">Search</string>
     <string name="enter_pokemon_s_name">Enter Pokemon\'s name :</string>
@@ -15,4 +15,7 @@
     <string name="hp">HP</string>
     <string name="pokemon_hp_value">Pokemon HP Value</string>
     <string name="pokemon_not_found">Pokémon not found</string>
+    <string name="back">Back</string>
+    <string name="website">WebSite</string>
+    <string name="pokemon_save_good" >The Pokemon’s stats have been recorded</string>
 </resources>
