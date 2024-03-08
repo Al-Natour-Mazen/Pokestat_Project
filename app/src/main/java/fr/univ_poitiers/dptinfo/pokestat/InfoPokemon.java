@@ -1,7 +1,8 @@
 package fr.univ_poitiers.dptinfo.pokestat;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -29,6 +30,10 @@ import java.io.PrintStream;
 import java.text.Normalizer;
 import java.util.ArrayList;
 
+import fr.univ_poitiers.dptinfo.pokestat.DAOs.PokemonDao;
+import fr.univ_poitiers.dptinfo.pokestat.DataBases.PokemonRoomDatabase;
+import fr.univ_poitiers.dptinfo.pokestat.Entities.Pokemon;
+import fr.univ_poitiers.dptinfo.pokestat.Repositories.PokemonRepository;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -44,6 +49,8 @@ public class InfoPokemon extends AppCompatActivity {
 
     private Button backBtn,webSiteBtn;
 
+    private PokemonRepository ripo;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +63,12 @@ public class InfoPokemon extends AppCompatActivity {
         pokemonName = Normalizer.normalize(pokemonName, Normalizer.Form.NFD);
         // Remplacer les marques diacritiques par des chaînes vides
         pokemonName = pokemonName.replaceAll("\\p{M}", "");
+
+        Log.i(APP_TAG, "je suis avant l'appel du ripo");
+
+        ripo = new PokemonRepository(InfoPokemon.this.getApplication());
+
+        Log.i(APP_TAG, "je suis apres l'appel du ripo");
 
 
         pokeImage = findViewById(R.id.pokemonImage);
@@ -77,10 +90,21 @@ public class InfoPokemon extends AppCompatActivity {
             startActivity(intent);
         });
 
-
         if (pokemonName != null && !pokemonName.equals("") && pokeName != null) {
-            pokeName.setText(pokemonName);
-            new FetchPokemonDataTask().execute(pokemonName);
+            LiveData<Pokemon> pokemonLiveData = ripo.getPokemon(pokemonName);
+            pokemonLiveData.observe(this, new Observer<Pokemon>() {
+                @Override
+                public void onChanged(Pokemon poke) {
+                    if (poke != null) {
+                        getDataFromDB(poke);
+                    } else {
+                        pokeName.setText(pokemonName);
+                        new FetchPokemonDataTask().execute(pokemonName);
+                    }
+
+                    pokemonLiveData.removeObserver(this);
+                }
+            });
         }
 
         Log.d(APP_TAG, "onCreate");
@@ -106,6 +130,7 @@ public class InfoPokemon extends AppCompatActivity {
             }
         }
 
+        @SuppressLint("StaticFieldLeak")
         @Override
         protected void onPostExecute(JsonObject jsonObject) {
             if (jsonObject.has("stats") && !jsonObject.get("stats").isJsonNull()) {
@@ -144,6 +169,16 @@ public class InfoPokemon extends AppCompatActivity {
                 fiche += "pokeImage : " + imageUrl + "\n";
                 write_fiche_in_file(fiche);
 
+
+                final Pokemon poke = new Pokemon();
+                poke.setHeight(height);
+                poke.setHp(hp);
+                poke.setName(pokemonName);
+                poke.setType(typeNames.toString());
+                poke.setWeight(weight);
+                poke.setImageUrl(imageUrl);
+                ripo.insertPokemon(poke);
+
             } else {
                 String message = getString(R.string.pokemon_not_found);
                 Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
@@ -171,5 +206,16 @@ public class InfoPokemon extends AppCompatActivity {
             e.printStackTrace();
             Log.e(APP_TAG,"Error I/O",e);
         }
+    }
+
+
+    public void getDataFromDB(Pokemon poke){
+        pokeName.setText(poke.getName());
+        pokeSize.setText(poke.getHeight());
+        pokeWeight.setText(poke.getWeight());
+        pokeType.setText(poke.getType());
+        pokeHp.setText(poke.getHp());
+        Glide.with(InfoPokemon.this).load(poke.getImageUrl()).into(pokeImage);
+        Toast.makeText(InfoPokemon.this, "Pokemon loaded from DB", Toast.LENGTH_SHORT).show();
     }
 }
