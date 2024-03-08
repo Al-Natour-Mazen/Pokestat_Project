@@ -1,9 +1,5 @@
 package fr.univ_poitiers.dptinfo.pokestat;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.Observer;
-
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
@@ -15,6 +11,10 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
@@ -42,13 +42,10 @@ public class InfoPokemon extends AppCompatActivity {
 
     public static final String APP_TAG = "INFOPOKEMON";
 
-    private String pokemonName,pokemonNameNonNormalize;
+    private String pokemonName, pokemonNameNonNormalize;
     private TextView pokeName, pokeSize, pokeWeight, pokeType, pokeHp;
-
     private ImageView pokeImage;
-
-    private Button backBtn,webSiteBtn;
-
+    private Button backBtn, webSiteBtn;
     private PokemonRepository ripo;
 
     @Override
@@ -56,21 +53,31 @@ public class InfoPokemon extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_info_pokemon);
 
-        // Récupérer le nom du Pokemon passé en argument
         pokemonName = getIntent().getStringExtra("inputpokemonname");
         pokemonNameNonNormalize = pokemonName;
-        // Normaliser le nom du Pokemon en forme NFD (décomposition canonique)
-        pokemonName = Normalizer.normalize(pokemonName, Normalizer.Form.NFD);
-        // Remplacer les marques diacritiques par des chaînes vides
-        pokemonName = pokemonName.replaceAll("\\p{M}", "");
-
-        Log.i(APP_TAG, "je suis avant l'appel du ripo");
+        pokemonName = normalizePokemonName(pokemonName);
 
         ripo = new PokemonRepository(InfoPokemon.this.getApplication());
 
-        Log.i(APP_TAG, "je suis apres l'appel du ripo");
+        initializeViews();
 
+        backBtn.setOnClickListener(v -> finish());
 
+        webSiteBtn.setOnClickListener(v -> openPokemonWebsite());
+
+        if (pokemonName != null && !pokemonName.isEmpty() && pokeName != null) {
+            pokeName.setText(pokemonName);
+            fetchDataFromApiOrDatabase();
+        }
+
+    }
+
+    private String normalizePokemonName(String pokemonName) {
+        pokemonName = Normalizer.normalize(pokemonName, Normalizer.Form.NFD);
+        return pokemonName.replaceAll("\\p{M}", "");
+    }
+
+    private void initializeViews() {
         pokeImage = findViewById(R.id.pokemonImage);
         pokeName = findViewById(R.id.textViewPSN);
         pokeSize = findViewById(R.id.textViewPSV);
@@ -79,37 +86,40 @@ public class InfoPokemon extends AppCompatActivity {
         pokeHp = findViewById(R.id.textViewPHP);
         backBtn = findViewById(R.id.buttonBack);
         webSiteBtn = findViewById(R.id.buttonWebSite);
-
-        backBtn.setOnClickListener(v -> {
-            finish();
-        });
-
-        webSiteBtn.setOnClickListener(v -> {
-            String pokeUrl = "https://www.pokepedia.fr/"+ pokemonNameNonNormalize;
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(pokeUrl));
-            startActivity(intent);
-        });
-
-        if (pokemonName != null && !pokemonName.equals("") && pokeName != null) {
-            LiveData<Pokemon> pokemonLiveData = ripo.getPokemon(pokemonName);
-            pokemonLiveData.observe(this, new Observer<Pokemon>() {
-                @Override
-                public void onChanged(Pokemon poke) {
-                    if (poke != null) {
-                        getDataFromDB(poke);
-                    } else {
-                        pokeName.setText(pokemonName);
-                        new FetchPokemonDataTask().execute(pokemonName);
-                    }
-
-                    pokemonLiveData.removeObserver(this);
-                }
-            });
-        }
-
-        Log.d(APP_TAG, "onCreate");
     }
 
+    private void openPokemonWebsite() {
+        String pokeUrl = "https://www.pokepedia.fr/" + pokemonNameNonNormalize;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(pokeUrl));
+        startActivity(intent);
+    }
+
+    private void fetchDataFromApiOrDatabase() {
+        LiveData<Pokemon> pokemonLiveData = ripo.getPokemon(pokemonName);
+        pokemonLiveData.observe(this, new Observer<Pokemon>() {
+            @Override
+            public void onChanged(Pokemon poke) {
+                if (poke != null) {
+
+                    displayPokemonData(poke);
+                } else {
+                    new FetchPokemonDataTask().execute(pokemonName);
+                }
+                pokemonLiveData.removeObserver(this);
+            }
+        });
+    }
+
+    private void displayPokemonData(Pokemon poke) {
+        pokeSize.setText(poke.getHeight());
+        pokeWeight.setText(poke.getWeight());
+        pokeType.setText(poke.getType());
+        pokeHp.setText(poke.getHp());
+        Glide.with(InfoPokemon.this).load(poke.getImageUrl()).into(pokeImage);
+        Toast.makeText(InfoPokemon.this, "Pokemon loaded from DB", Toast.LENGTH_SHORT).show();
+    }
+
+    @SuppressLint("StaticFieldLeak")
     private class FetchPokemonDataTask extends AsyncTask<String, Void, JsonObject> {
 
         @Override
@@ -130,69 +140,60 @@ public class InfoPokemon extends AppCompatActivity {
             }
         }
 
-        @SuppressLint("StaticFieldLeak")
         @Override
         protected void onPostExecute(JsonObject jsonObject) {
-            if (jsonObject.has("stats") && !jsonObject.get("stats").isJsonNull()) {
-                JsonObject stats = jsonObject.get("stats").getAsJsonObject();
-
-                String hp = stats.get("hp").getAsString();
-
-                JsonArray types = jsonObject.get("types").getAsJsonArray();
-                ArrayList<String> typeNames = new ArrayList<>();
-
-                for (JsonElement typeElement : types) {
-                    JsonObject typeObject = typeElement.getAsJsonObject();
-                    String typeName = typeObject.get("name").getAsString();
-                    typeNames.add(typeName);
-                }
-
-                String weight = jsonObject.get("weight").getAsString();
-                String height = jsonObject.get("height").getAsString();
-
-
-                String imageUrl = jsonObject.get("sprites").getAsJsonObject().get("regular").getAsString();
-                Glide.with(InfoPokemon.this).load(imageUrl).into(pokeImage);
-
-                pokeSize.setText(height);
-                pokeWeight.setText(weight);
-                pokeType.setText(typeNames.toString());
-                pokeHp.setText(hp);
-
-
-                String fiche = "";
-                fiche += "pokemonName " + pokemonName + "\n";
-                fiche += "pokeWeight : " + weight + "\n";
-                fiche += "pokeSize : " + height + "\n";
-                fiche += "pokeType : " + typeNames.toString() + "\n";
-                fiche += "pokeHp : " + hp + "\n";
-                fiche += "pokeImage : " + imageUrl + "\n";
-                write_fiche_in_file(fiche);
-
-
-                final Pokemon poke = new Pokemon();
-                poke.setHeight(height);
-                poke.setHp(hp);
-                poke.setName(pokemonName);
-                poke.setType(typeNames.toString());
-                poke.setWeight(weight);
-                poke.setImageUrl(imageUrl);
-                ripo.insertPokemon(poke);
-
+            if (jsonObject != null && jsonObject.has("stats") && !jsonObject.get("stats").isJsonNull()) {
+                processPokemonData(jsonObject);
             } else {
                 String message = getString(R.string.pokemon_not_found);
                 Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
             }
         }
+
+        private void processPokemonData(JsonObject jsonObject) {
+            String hp = jsonObject.get("stats").getAsJsonObject().get("hp").getAsString();
+            JsonArray types = jsonObject.get("types").getAsJsonArray();
+            ArrayList<String> typeNames = new ArrayList<>();
+            for (JsonElement typeElement : types) {
+                typeNames.add(typeElement.getAsJsonObject().get("name").getAsString());
+            }
+            String weight = jsonObject.get("weight").getAsString();
+            String height = jsonObject.get("height").getAsString();
+            String imageUrl = jsonObject.get("sprites").getAsJsonObject().get("regular").getAsString();
+
+            Glide.with(InfoPokemon.this).load(imageUrl).into(pokeImage);
+            pokeSize.setText(height);
+            pokeWeight.setText(weight);
+            pokeType.setText(typeNames.toString());
+            pokeHp.setText(hp);
+
+            String fiche = "pokemonName " + pokemonName + "\n" +
+                    "pokeWeight : " + weight + "\n" +
+                    "pokeSize : " + height + "\n" +
+                    "pokeType : " + typeNames.toString() + "\n" +
+                    "pokeHp : " + hp + "\n" +
+                    "pokeImage : " + imageUrl + "\n";
+
+            writePokemonDataToFile(fiche);
+
+            savePokemonToDatabase(weight, height, hp, typeNames.toString(), imageUrl);
+        }
+
+        private void savePokemonToDatabase(String weight, String height, String hp, String types, String imageUrl) {
+            Pokemon poke = new Pokemon();
+            poke.setHeight(height);
+            poke.setHp(hp);
+            poke.setName(pokemonName);
+            poke.setType(types);
+            poke.setWeight(weight);
+            poke.setImageUrl(imageUrl);
+            ripo.insertPokemon(poke);
+        }
     }
 
-    // Méthode qui écrit la fiche d'un Pokemon dans un fichier
-    public void write_fiche_in_file(String fiche) {
-        // Choix du répertoire et du nom du fichier
+    private void writePokemonDataToFile(String fiche) {
         File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         File fileout = new File(folder, "pokestat_fiche.txt");
-
-        // Tentative d'écriture dans le fichier
         try (FileOutputStream fos = new FileOutputStream(fileout, true)) {
             PrintStream ps = new PrintStream(fos);
             ps.println(fiche);
@@ -200,22 +201,11 @@ public class InfoPokemon extends AppCompatActivity {
             String message = getString(R.string.pokemon_save_good);
             Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
         } catch (FileNotFoundException e) {
-            Log.e(APP_TAG,"File not found",e);
+            Log.e(APP_TAG, "File not found", e);
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e(APP_TAG,"Error I/O",e);
+            Log.e(APP_TAG, "Error I/O", e);
         }
-    }
-
-
-    public void getDataFromDB(Pokemon poke){
-        pokeName.setText(poke.getName());
-        pokeSize.setText(poke.getHeight());
-        pokeWeight.setText(poke.getWeight());
-        pokeType.setText(poke.getType());
-        pokeHp.setText(poke.getHp());
-        Glide.with(InfoPokemon.this).load(poke.getImageUrl()).into(pokeImage);
-        Toast.makeText(InfoPokemon.this, "Pokemon loaded from DB", Toast.LENGTH_SHORT).show();
     }
 }
