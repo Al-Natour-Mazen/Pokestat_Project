@@ -198,7 +198,7 @@ public class InfoPokemon extends AppCompatActivity {
             PrintStream ps = new PrintStream(fos);
             ps.println(fiche);
             ps.close();
-            String message = getString(R.string.pokemon_save_good);
+            String message = this.getString(R.string.pokemon_save_good);
             Toast.makeText(InfoPokemon.this, message, Toast.LENGTH_SHORT).show();
         } catch (FileNotFoundException e) {
             Log.e(APP_TAG, "File not found", e);
