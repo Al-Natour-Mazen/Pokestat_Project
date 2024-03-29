@@ -2,8 +2,10 @@ package fr.univ_poitiers.dptinfo.pokestat.Entities;
 
 import androidx.room.*;
 
+import java.io.Serializable;
+
 @Entity(tableName = "pokemon_table")
-public class Pokemon {
+public class Pokemon implements Serializable {
     @PrimaryKey(autoGenerate = true)
     private int id;
 
